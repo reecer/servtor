@@ -1,73 +1,68 @@
 #!/usr/bin/python
-from gi.repository import Gtk, GObject
-import urllib2
-import stem, os
+import gtk, gobject
+import hidden_service
 
-CNTRL_PORT = 7001
 
-class MyWindow(Gtk.Window):
-
+class MyWindow(gtk.Window):
 	def __init__(self):
-		Gtk.Window.__init__(self, title="Hello World")
-		self.switch = Gtk.Switch()
-		self.switch.connect("notify::active", self.switchClicked)
-		self.portLabel = Gtk.Label("localhost port :")
+		gtk.Window.__init__(self)
+		self.set_size_request(200,100)
+		self.switch = gtk.Button("Start")
+		self.switch.connect("clicked", self.switchClicked)
 
-		self.portEntry = Gtk.Entry()
+		self.portLabel = gtk.Label("localhost port :")
+		self.portEntry = gtk.Entry()
+		self.portEntry.set_text("8080")
 		self.portEntry.set_width_chars(6)
+		self.statbar = gtk.Statusbar()
+		self.status_id = self.statbar.get_context_id("main") # for setting status
 
+		box = gtk.HBox()
+		box.pack_start(self.portLabel)
+		box.pack_start(self.portEntry)
 
-		self.box = Gtk.Box()
-		self.box.pack_start(self.portLabel, True, True, 15)
-		self.box.pack_start(self.portEntry, True, True, 15)
-		self.box.pack_end(self.switch, True, True, 15)
-		self.add(self.box)
+		outmost = gtk.VBox()
+		outmost.pack_start(box)
+		outmost.pack_start(self.switch)
+		outmost.pack_end(self.statbar)
 
-	def startTor(self, port):
-		"""Assumed port is int."""
-		if self.test_localhost(port):
-			print 'Server running at localhost:%d'% port
-			tor_config = {
-				"HiddenServiceDir" : ".tor_us",
-				"HiddenServicePort": "80 127.0.0.1:%d" % port,
-				'ControlPort': str(CNTRL_PORT)
-			}
-			sys.stdout.write("Starting tor...")
-			stem.process.launch_tor_with_config(config = tor_config, completion_percent = 5)
-			sys.stdout.write("  done\n\n")
-		else: # no localhost server running
-			print "No localhost server is running on port %d" % port
+		self.add(outmost)
 
-	def stopTor(self):
-		"""
-	  	Stops the tor instance spawned by this module.
-	  	"""
-		tor_pid = stem.util.system.get_pid_by_port(CONTROL_PORT)
-		if tor_pid: os.kill(tor_pid, signal.SIGTERM)
+		self.connect("delete-event", self.quitzies)
+		self.service = hidden_service.TorConnection(self)
+		self.status("Ready.")
+		self.show_all()
 
-	def test_localhost(self, port):
-		"""Returns true if localhost is running on given port"""
-		try: 
-			urllib2.urlopen("http://127.0.0.1:%d" % port)
-		except Exception as e: return False
-		return True
+	def status(self,status):
+		msg = str(status)
+		self.statbar.push(self.status_id, msg)
 
-	def switchClicked(self, widget, e):
+	def quitzies(self, a, b):
+		self.turn_off()
+		gtk.main_quit()
+
+	def switchClicked(self, widget):
 		"""
 		When the switch is activated, this callback will either connect or disconnect 
 		the tor connection.
 		"""
-		if widget.get_active():
-			print "Connecting"
-			port = self.portEntry.get_text()
-			if not port: port = 9090
-			self.startTor(port)
-		else:
-			print "Disconnecting"
+		if widget.get_label() == "Start": 
+			self.turn_on()
+		else: 
+			self.turn_off()
+
+	def turn_on(self):
+		self.switch.set_label("Stop")
+		self.status("Starting...")
+		port = int(self.portEntry.get_text())
+		self.service.start(int(port))
+
+	def turn_off(self):
+		self.switch.set_label("Start")
+		self.status("Stopping...")
+		self.service.stop()
 
 
-GObject.threads_init()
+# gobject.threads_init()
 win = MyWindow()
-win.connect("delete-event", Gtk.main_quit)
-win.show_all()
-Gtk.main()
+gtk.main()

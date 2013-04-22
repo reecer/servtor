@@ -33,7 +33,7 @@ class TorConnection:
 			print "\n## ERROR LAUNCHING TOR ##\n", e
 			sys.stdout.flush()
 		else:
-			self.running = True
+			self.alive = True
 			onion = self.get_hostname().strip()
 			self.status("Tor started!")
 			print onion
@@ -57,8 +57,8 @@ class TorConnection:
 		"""
 	  	Stops the tor instance spawned by this module.
 	  	"""
-	  	if self.running:
-		  	self.running = False
+	  	if self.alive:
+		  	self.alive = False
 		  	if self.thread: self.thread.join()
 			if self.process:self.process.kill()
 		  	shutil.rmtree(path=self.hs_dir)

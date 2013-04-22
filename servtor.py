@@ -12,6 +12,9 @@ CONTROL_PORT = 9051
 
 class Server:
 	def __init__(self, port=8080, path=""):
+		"""
+		Server running SimpleHTTPServer. To be used over Tor.
+		"""
 		self.port = port
 		self.running = False
 		self.thread = None
@@ -19,6 +22,9 @@ class Server:
 		# self.set_path(os.getcwd())
 
 	def set_path(self, path):
+		"""
+		Set the path to be used as server's directory."
+		"""
 		self.path = path
 		os.chdir(path)
 
